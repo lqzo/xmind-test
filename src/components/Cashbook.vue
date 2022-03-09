@@ -67,6 +67,7 @@ fetch("src/assets/file/bill.csv", {
       }, {});
     });
     originData.value = result;
+    billData.value = result;
   });
 });
 
@@ -94,10 +95,37 @@ function showBilldata(key, val) {
   }
   return val;
 }
+
+// 月份筛选账单
+const selectMonth = ref(null);
+const billData = ref([]);
+const monthChange = (val) => {
+  if (val === null) {
+    billData.value = originData.value;
+    return;
+  }
+  const month = val.getMonth() + 1;
+  const year = val.getFullYear();
+  const data = originData.value.filter((item) => {
+    const time = new Date(+item.time);
+    return time.getFullYear() === year && time.getMonth() + 1 === month;
+  });
+  billData.value = data;
+};
 </script>
 
 <template>
-  <el-table :data="originData" border style="width: 100%">
+  <!-- Bill Filter -->
+  <div class="filter-container">
+    <el-date-picker
+      v-model="selectMonth"
+      type="month"
+      placeholder="选择月份"
+      @change="monthChange"
+    />
+  </div>
+  <!-- Bill Data Table -->
+  <el-table :data="billData" border style="width: 100%">
     <el-table-column
       v-for="(column, index) in columns"
       :key="index"
@@ -114,4 +142,15 @@ function showBilldata(key, val) {
 </template>
 
 <style scoped>
+.filter-container {
+  display: flex;
+  padding-bottom: 10px;
+}
+.filter-item {
+  vertical-align: middle;
+  margin-bottom: 10px;
+}
+.filter-item + .filter-item {
+  margin-left: 10px;
+}
 </style>
