@@ -1,11 +1,6 @@
 <script setup>
-import { defineComponent, ref } from "vue";
+import { reactive, ref } from "vue";
 import { formatDate } from "../utils";
-import { ElTable } from "element-plus";
-
-defineComponent({
-  "el-table": ElTable,
-});
 
 // key name mapping
 const keyNameMap = {
@@ -100,6 +95,10 @@ function showBilldata(key, val) {
 const selectMonth = ref(null);
 const billData = ref([]);
 const monthChange = (val) => {
+  filterBillData(val);
+};
+// 筛选月份账单
+const filterBillData = function (val) {
   if (val === null) {
     billData.value = originData.value;
     return;
@@ -112,6 +111,59 @@ const monthChange = (val) => {
   });
   billData.value = data;
 };
+// 新增账单
+const dialogVisible = ref(false);
+const billForm = ref(null);
+const bill = reactive({
+  time: "",
+  type: "",
+  amount: 0,
+  category: "",
+});
+// 账单格式校验
+const rules = reactive([
+  {
+    amount: [{ required: true, message: "请输入账单金额", trigger: "change" }],
+    category: [
+      { required: true, message: "请选择账单分类", trigger: "change" },
+    ],
+  },
+]);
+// 打开新增账单对话框
+function openAddDialog() {
+  dialogVisible.value = true;
+  billForm.value.resetFields();
+}
+// 关闭添加账单弹窗
+const handleClose = (done) => {
+  ElMessageBox.confirm("是否要关闭弹窗重置表单?")
+    .then(() => {
+      billForm.value.resetFields();
+      done();
+    })
+    .catch(() => {
+      console.log("cancel");
+    });
+};
+// 新增账单
+const handleAdd = () => {
+  // 表单校验格式
+  billForm.value.validate((valid) => {
+    if (valid) {
+      const data = {
+        ...bill,
+        time: Date.now(),
+      };
+      originData.value.push(data);
+      filterBillData(selectMonth.value);
+      billForm.value.resetFields();
+      ElMessage.success("添加账单成功");
+      dialogVisible.value = false;
+    } else {
+      ElMessage.error("表单校验失败");
+    }
+  });
+};
 </script>
 
 <template>
@@ -121,8 +173,10 @@ const monthChange = (val) => {
       v-model="selectMonth"
       type="month"
       placeholder="选择月份"
+      class="filter-item"
       @change="monthChange"
     />
+    <el-button class="filter-item" @click="openAddDialog">添加账单</el-button>
   </div>
   <!-- Bill Data Table -->
   <el-table :data="billData" border style="width: 100%">
@@ -139,18 +193,52 @@ const monthChange = (val) => {
       </template>
     </el-table-column>
   </el-table>
+  <!-- Bill dialog -->
+  <el-dialog
+    v-model="dialogVisible"
+    title="添加账单"
+    width="40%"
+    :before-close="handleClose"
+  >
+    <el-form :model="bill" :rules="rules" ref="billForm" label-width="80px">
+      <el-form-item label="账单分类">
+        <el-select v-model="bill.category" placeholder="选择分类">
+          <el-option
+            v-for="item in categories"
+            :key="item.id"
+            :label="item.name"
+            :value="item.id"
+          />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="账单金额">
+        <el-input-number v-model="bill.amount" :min="0" />
+      </el-form-item>
+      <el-form-item label="账单类型">
+        <el-radio-group v-model="bill.type">
+          <el-radio :label="1">收入</el-radio>
+          <el-radio :label="0">支出</el-radio>
+        </el-radio-group>
+      </el-form-item>
+    </el-form>
+    <template #footer class="dialog-footer">
+      <el-button @click="dialogVisible = false">取 消</el-button>
+      <el-button type="primary" @click="handleAdd"> 确 定 </el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <style scoped>
 .filter-container {
   display: flex;
+  align-items: center;
   padding-bottom: 10px;
 }
-.filter-item {
-  vertical-align: middle;
+.filter-container >>> .filter-item {
   margin-bottom: 10px;
 }
 .filter-item + .filter-item {
+  margin-bottom: 10px;
   margin-left: 10px;
 }
 </style>
