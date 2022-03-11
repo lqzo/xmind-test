@@ -27,7 +27,11 @@ fetch("src/assets/file/categories.csv", {
     const values = data.slice(1);
     const result = values.map((row) => {
       return keys.reduce((obj, key, index) => {
-        obj[key] = row[index];
+        if (key === "category") {
+          obj[key] = row[index];
+        } else {
+          obj[key] = +row[index];
+        }
         return obj;
       }, {});
     });
@@ -57,7 +61,11 @@ fetch("src/assets/file/bill.csv", {
     const values = data.slice(1);
     const result = values.map((row) => {
       return keys.reduce((obj, key, index) => {
-        obj[key] = row[index];
+        if (key === "category") {
+          obj[key] = row[index];
+        } else {
+          obj[key] = +row[index];
+        }
         return obj;
       }, {});
     });
@@ -80,13 +88,13 @@ function showBilldata(key, val) {
     return category ? category.name : "";
   }
   if (key === "type") {
-    return val === "1" ? "收入" : "支出";
+    return val === 1 ? "收入" : "支出";
   }
   if (key === "amount") {
     return `${val} 元`;
   }
   if (key === "time") {
-    return formatDate(+val);
+    return formatDate(val);
   }
   return val;
 }
@@ -106,7 +114,7 @@ const filterBillData = function (val) {
   const month = val.getMonth() + 1;
   const year = val.getFullYear();
   const data = originData.value.filter((item) => {
-    const time = new Date(+item.time);
+    const time = new Date(item.time);
     return time.getFullYear() === year && time.getMonth() + 1 === month;
   });
   billData.value = data;
@@ -174,14 +182,14 @@ const statisticData = reactive({
 function openChartDialog() {
   // 计算当前数据金额 income outcome
   statisticData.income = billData.value.reduce((total, item) => {
-    if (item.type === "1") {
-      return total + +item.amount;
+    if (item.type === 1) {
+      return total + item.amount;
     }
     return total;
   }, 0);
   statisticData.outcome = billData.value.reduce((total, item) => {
-    if (item.type === "0") {
-      return total + +item.amount;
+    if (item.type === 0) {
+      return total + item.amount;
     }
     return total;
   }, 0);
