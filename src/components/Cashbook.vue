@@ -164,6 +164,37 @@ const handleAdd = () => {
     }
   });
 };
+// 查看统计数据
+const showStatistic = ref(false);
+const statisticTitle = ref("");
+const statisticData = reactive({
+  income: 0,
+  outcome: 0,
+});
+function openChartDialog() {
+  // 计算当前数据金额 income outcome
+  statisticData.income = billData.value.reduce((total, item) => {
+    if (item.type === "1") {
+      return total + +item.amount;
+    }
+    return total;
+  }, 0);
+  statisticData.outcome = billData.value.reduce((total, item) => {
+    if (item.type === "0") {
+      return total + +item.amount;
+    }
+    return total;
+  }, 0);
+
+  // 月份 或 全部订单
+  const month = selectMonth.value;
+  if (month) {
+    statisticTitle.value = `${month.getFullYear()}年${month.getMonth() + 1}月`;
+  } else {
+    statisticTitle.value = "全部账单";
+  }
+  showStatistic.value = true;
+}
 </script>
 
 <template>
@@ -177,6 +208,7 @@ const handleAdd = () => {
       @change="monthChange"
     />
     <el-button class="filter-item" @click="openAddDialog">添加账单</el-button>
+    <el-button class="filter-item" @click="openChartDialog">查看统计</el-button>
   </div>
   <!-- Bill Data Table -->
   <el-table :data="billData" border style="width: 100%">
@@ -224,6 +256,20 @@ const handleAdd = () => {
     <template #footer class="dialog-footer">
       <el-button @click="dialogVisible = false">取 消</el-button>
       <el-button type="primary" @click="handleAdd"> 确 定 </el-button>
+    </template>
+  </el-dialog>
+  <!-- 统计数据展示弹窗 -->
+  <el-dialog v-model="showStatistic" title="统计数据" width="40%">
+    <el-descriptions :title="statisticTitle">
+      <el-descriptions-item label="收入">
+        {{ statisticData.income }}
+      </el-descriptions-item>
+      <el-descriptions-item label="支出">
+        {{ statisticData.outcome }}
+      </el-descriptions-item>
+    </el-descriptions>
+    <template #footer class="dialog-footer">
+      <el-button @click="showStatistic = false">关 闭</el-button>
     </template>
   </el-dialog>
 </template>
