@@ -252,7 +252,7 @@ function openChartDialog() {
         </el-select>
       </el-form-item>
       <el-form-item label="账单金额">
-        <el-input-number v-model="bill.amount" :min="0" />
+        <el-input-number v-model="bill.amount" />
       </el-form-item>
       <el-form-item label="账单类型">
         <el-radio-group v-model="bill.type">
