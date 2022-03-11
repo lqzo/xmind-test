@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, ref } from "vue";
+import { reactive, ref, watch } from "vue";
 import { formatDate } from "../utils";
 
 // key name mapping
@@ -27,10 +27,10 @@ fetch("src/assets/file/categories.csv", {
     const values = data.slice(1);
     const result = values.map((row) => {
       return keys.reduce((obj, key, index) => {
-        if (key === "category") {
-          obj[key] = row[index];
-        } else {
+        if (key === "type") {
           obj[key] = +row[index];
+        } else {
+          obj[key] = row[index];
         }
         return obj;
       }, {});
@@ -40,7 +40,7 @@ fetch("src/assets/file/categories.csv", {
 });
 
 // import bill data
-const originData = ref([]);
+const originData = reactive([]);
 const columns = ref([]);
 fetch("src/assets/file/bill.csv", {
   headers: {
@@ -69,8 +69,7 @@ fetch("src/assets/file/bill.csv", {
         return obj;
       }, {});
     });
-    originData.value = result;
-    billData.value = result;
+    originData.push(...result);
   });
 });
 
@@ -99,26 +98,31 @@ function showBilldata(key, val) {
   return val;
 }
 
+const billData = ref([]);
 // 月份筛选账单
 const selectMonth = ref(null);
-const billData = ref([]);
-const monthChange = (val) => {
-  filterBillData(val);
-};
-// 筛选月份账单
-const filterBillData = function (val) {
-  if (val === null) {
-    billData.value = originData.value;
-    return;
-  }
-  const month = val.getMonth() + 1;
-  const year = val.getFullYear();
-  const data = originData.value.filter((item) => {
-    const time = new Date(item.time);
-    return time.getFullYear() === year && time.getMonth() + 1 === month;
+// 类型筛选账单
+const selectCategory = ref("");
+watch([selectMonth, selectCategory, originData], (newValues, prevValues) => {
+  console.log("newValues =>", newValues, "prevValues => ", prevValues);
+  const [date, category] = newValues;
+  billData.value = originData.filter((item) => {
+    if (date !== null) {
+      const time = new Date(item.time);
+      const year = date.getFullYear();
+      const month = date.getMonth() + 1;
+      if (time.getFullYear() !== year || time.getMonth() + 1 !== month) {
+        return false;
+      }
+    }
+    if (category !== "") {
+      return item.category === category;
+    }
+    return true;
   });
-  billData.value = data;
-};
+  console.log(billData.value);
+});
+
 // 新增账单
 const dialogVisible = ref(false);
 const billForm = ref(null);
@@ -128,6 +132,12 @@ const bill = reactive({
   amount: 0,
   category: "",
 });
+const resetBill = () => {
+  bill.time = "";
+  bill.type = "";
+  bill.amount = 0;
+  bill.category = "";
+};
 // 账单格式校验
 const rules = reactive([
   {
@@ -137,16 +147,11 @@ const rules = reactive([
     ],
   },
 ]);
-// 打开新增账单对话框
-function openAddDialog() {
-  dialogVisible.value = true;
-  billForm.value.resetFields();
-}
 // 关闭添加账单弹窗
 const handleClose = (done) => {
   ElMessageBox.confirm("是否要关闭弹窗重置表单?")
     .then(() => {
-      billForm.value.resetFields();
+      resetBill();
       done();
     })
     .catch(() => {
@@ -162,9 +167,8 @@ const handleAdd = () => {
         ...bill,
         time: Date.now(),
       };
-      originData.value.push(data);
-      filterBillData(selectMonth.value);
-      billForm.value.resetFields();
+      originData.push(data);
+      resetBill();
       ElMessage.success("添加账单成功");
       dialogVisible.value = false;
     } else {
@@ -213,9 +217,19 @@ function openChartDialog() {
       type="month"
       placeholder="选择月份"
       class="filter-item"
-      @change="monthChange"
     />
-    <el-button class="filter-item" @click="openAddDialog">添加账单</el-button>
+    <el-select v-model="selectCategory" class="filter-item">
+      <el-option label="全部" value=""></el-option>
+      <el-option
+        v-for="item in categories"
+        :key="item.id"
+        :label="item.name"
+        :value="item.id"
+      />
+    </el-select>
+    <el-button class="filter-item" @click="dialogVisible = true">
+      添加账单
+    </el-button>
     <el-button class="filter-item" @click="openChartDialog">查看统计</el-button>
   </div>
   <!-- Bill Data Table -->
@@ -242,7 +256,7 @@ function openChartDialog() {
   >
     <el-form :model="bill" :rules="rules" ref="billForm" label-width="80px">
       <el-form-item label="账单分类">
-        <el-select v-model="bill.category" placeholder="选择分类">
+        <el-select v-model="bill.category" key="null" placeholder="选择分类">
           <el-option
             v-for="item in categories"
             :key="item.id"
