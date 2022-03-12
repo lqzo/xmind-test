@@ -206,6 +206,45 @@ function openChartDialog() {
     statisticTitle.value = "全部账单";
   }
   showStatistic.value = true;
+  getCategoryStatistic();
+}
+// 根据账单分类进行订单收入支出金额统计，并排序
+const categoryStatistic = reactive({
+  income: [],
+  outcome: [],
+});
+function getCategoryStatistic() {
+  const data = billData.value;
+  const categoryMap = categories.value.reduce((obj, item) => {
+    obj[item.id] = item.name;
+    return obj;
+  }, {});
+  categoryStatistic.income = [];
+  categoryStatistic.outcome = [];
+  data.forEach((item) => {
+    const category = categoryMap[item.category];
+    const type = item.type === 1 ? "income" : "outcome";
+    const amount = item.amount;
+    const statistic = categoryStatistic[type];
+    const index = statistic.findIndex((item) => {
+      return item.category === category;
+    });
+    if (index === -1) {
+      statistic.push({
+        category,
+        amount,
+      });
+    } else {
+      statistic[index].amount += amount;
+    }
+  });
+  categoryStatistic.income.sort((a, b) => {
+    return b.amount - a.amount;
+  });
+  categoryStatistic.outcome.sort((a, b) => {
+    return b.amount - a.amount;
+  });
+  return categoryStatistic;
 }
 </script>
 
@@ -251,7 +290,7 @@ function openChartDialog() {
   <el-dialog
     v-model="dialogVisible"
     title="添加账单"
-    width="40%"
+    width="60%"
     :before-close="handleClose"
   >
     <el-form :model="bill" :rules="rules" ref="billForm" label-width="80px">
@@ -283,13 +322,57 @@ function openChartDialog() {
   <!-- 统计数据展示弹窗 -->
   <el-dialog v-model="showStatistic" title="统计数据" width="40%">
     <el-descriptions :title="statisticTitle">
-      <el-descriptions-item label="收入">
+      <el-descriptions-item label="收入合计">
         {{ statisticData.income }}
       </el-descriptions-item>
-      <el-descriptions-item label="支出">
+      <el-descriptions-item label="支出合计">
         {{ statisticData.outcome }}
       </el-descriptions-item>
     </el-descriptions>
+    <!-- 收入数据 -->
+    <div class="statistic-title">收入明细</div>
+    <el-table
+      :data="categoryStatistic.income"
+      border
+      style="width: 100%"
+      class="statistic-table"
+    >
+      <el-table-column
+        prop="category"
+        label="账单分类"
+        align="center"
+        header-align="center"
+      ></el-table-column>
+      <el-table-column
+        sortable
+        prop="amount"
+        label="金额(元)"
+        align="center"
+        header-align="center"
+      ></el-table-column>
+    </el-table>
+    <!-- 支出数据 -->
+    <div class="statistic-title">支出明细</div>
+    <el-table
+      :data="categoryStatistic.outcome"
+      border
+      style="width: 100%"
+      class="statistic-table"
+    >
+      <el-table-column
+        prop="category"
+        label="账单分类"
+        align="center"
+        header-align="center"
+      ></el-table-column>
+      <el-table-column
+        sortable
+        prop="amount"
+        label="金额(元)"
+        align="center"
+        header-align="center"
+      ></el-table-column>
+    </el-table>
     <template #footer class="dialog-footer">
       <el-button @click="showStatistic = false">关 闭</el-button>
     </template>
@@ -308,5 +391,11 @@ function openChartDialog() {
 .filter-item + .filter-item {
   margin-bottom: 10px;
   margin-left: 10px;
+}
+.statistic-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 12px 0;
+  text-align: left;
 }
 </style>
